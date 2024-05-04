@@ -2,10 +2,10 @@ import torch
 import torch.nn.functional as F
 import numpy as np
 import rl_utils
-from tqdm import tqdm
-import matplotlib.pyplot as plt
-
-from ma_gym.envs.combat.combat import Combat
+from tqdm import tqdm #type: ignore
+import matplotlib.pyplot as plt #type: ignore
+from typing import Dict
+from ma_gym.envs.combat.combat import Combat #type: ignore
 
 class PolicyNet(torch.nn.Module):
     def __init__(self, state_dim, hidden_dim, action_dim):
@@ -101,6 +101,7 @@ team_size = 2
 grid_size = (15, 15)
 #创建Combat环境，格子世界的大小为15x15，己方智能体和敌方智能体数量都为2
 env = Combat(grid_shape=grid_size, n_agents=team_size, n_opponents=team_size)
+env.seed(0)
 
 state_dim = env.observation_space[0].shape[0]
 action_dim = env.action_space[0].n
@@ -112,14 +113,8 @@ win_list = []
 for i in range(10):
     with tqdm(total=int(num_episodes / 10), desc='Iteration %d' % i) as pbar:
         for i_episode in range(int(num_episodes / 10)):
-            transition_dict_1 = {
-                'states': [],
-                'actions': [],
-                'next_states': [],
-                'rewards': [],
-                'dones': []
-            }
-            transition_dict_2 = {
+            transition_dict_1:Dict = {'states': [], 'actions': [], 'next_states': [],'rewards': [],'dones': []}         
+            transition_dict_2:Dict = {
                 'states': [],
                 'actions': [],
                 'next_states': [],
@@ -160,7 +155,7 @@ for i in range(10):
                     'episode':
                     '%d' % (num_episodes / 10 * i + i_episode + 1),
                     'return':
-                    '%.1f' %( np.mean(win_list[-100:]))
+                    '%.3f' %( np.mean(win_list[-100:]))
                 })
             pbar.update(1)
 
