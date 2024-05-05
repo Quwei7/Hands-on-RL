@@ -7,6 +7,7 @@ import matplotlib.pyplot as plt #type: ignore
 from typing import Dict
 from ma_gym.envs.combat.combat import Combat #type: ignore
 import time
+import pickle
 
 class PolicyNet(torch.nn.Module):
     def __init__(self, state_dim, hidden_dim, action_dim):
@@ -112,6 +113,7 @@ agent = PPO(state_dim, hidden_dim, action_dim, actor_lr, critic_lr, lmbda, eps,
             gamma, device)
 
 win_list = []
+scores = []
 for k in range(10):
     with tqdm(total=int(num_episodes / 10), desc='Iteration %d' % k) as pbar:
         for i_episode in range(int(num_episodes / 10)):
@@ -125,6 +127,7 @@ for k in range(10):
             }
             s = env.reset()
             terminal = False
+            score = 0
             while not terminal:
 
                 a_1 = agent.take_action(s[0])
@@ -138,20 +141,24 @@ for k in range(10):
                 transition_dict_1['states'].append(s[0])
                 transition_dict_1['actions'].append(a_1)
                 transition_dict_1['next_states'].append(next_s[0])
+                r_0 = r[0] + 100 if info['win'] else r[0] - 0.1
+                r_1 = r[1] + 100 if info['win'] else r[0] - 0.1
                 transition_dict_1['rewards'].append(
-                    r[0] + 100 if info['win'] else r[0] - 0.1)
+                    r_0)
                 transition_dict_1['dones'].append(False)
                 transition_dict_2['states'].append(s[1])
                 transition_dict_2['actions'].append(a_2)
                 transition_dict_2['next_states'].append(next_s[1])
                 transition_dict_2['rewards'].append(
-                    r[1] + 100 if info['win'] else r[1] - 0.1)
+                   r_1)
                 transition_dict_2['dones'].append(False)
                 s = next_s
                 terminal = all(done)
                 if k==9 and i_episode == int(num_episodes / 10)-1:
                     env.render()
                     time.sleep(0.3)
+                score += r_0 + r_1
+            scores.append(score)
             win_list.append(1 if info["win"] else 0)
             agent.update(transition_dict_1)
             agent.update(transition_dict_2)
@@ -163,7 +170,12 @@ for k in range(10):
                     '%.3f' %( np.mean(win_list[-100:]))
                 })
             pbar.update(1)
+            
 
+data_to_save = {'scores': scores, 'win_list': win_list, 'name': 'PPO'}
+
+with open('data_file.pkl', 'wb') as f:
+    pickle.dump(data_to_save, f)
 
 win_array = np.array(win_list)
 #每100条轨迹取一次平均
