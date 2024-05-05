@@ -6,6 +6,7 @@ from tqdm import tqdm #type: ignore
 import matplotlib.pyplot as plt #type: ignore
 from typing import Dict
 from ma_gym.envs.combat.combat import Combat #type: ignore
+import time
 
 class PolicyNet(torch.nn.Module):
     def __init__(self, state_dim, hidden_dim, action_dim):
@@ -99,6 +100,7 @@ device = torch.device("cuda") if torch.cuda.is_available() else torch.device(
 
 team_size = 2
 grid_size = (15, 15)
+
 #创建Combat环境，格子世界的大小为15x15，己方智能体和敌方智能体数量都为2
 env = Combat(grid_shape=grid_size, n_agents=team_size, n_opponents=team_size)
 env.seed(0)
@@ -110,8 +112,8 @@ agent = PPO(state_dim, hidden_dim, action_dim, actor_lr, critic_lr, lmbda, eps,
             gamma, device)
 
 win_list = []
-for i in range(10):
-    with tqdm(total=int(num_episodes / 10), desc='Iteration %d' % i) as pbar:
+for k in range(10):
+    with tqdm(total=int(num_episodes / 10), desc='Iteration %d' % k) as pbar:
         for i_episode in range(int(num_episodes / 10)):
             transition_dict_1:Dict = {'states': [], 'actions': [], 'next_states': [],'rewards': [],'dones': []}         
             transition_dict_2:Dict = {
@@ -147,13 +149,16 @@ for i in range(10):
                 transition_dict_2['dones'].append(False)
                 s = next_s
                 terminal = all(done)
+                if k==9 and i_episode == int(num_episodes / 10)-1:
+                    env.render()
+                    time.sleep(0.3)
             win_list.append(1 if info["win"] else 0)
             agent.update(transition_dict_1)
             agent.update(transition_dict_2)
             if (i_episode + 1) % 100 == 0:
                 pbar.set_postfix({
                     'episode':
-                    '%d' % (num_episodes / 10 * i + i_episode + 1),
+                    '%d' % (num_episodes / 10 * k + i_episode + 1),
                     'return':
                     '%.3f' %( np.mean(win_list[-100:]))
                 })
@@ -168,5 +173,5 @@ episodes_list = np.arange(win_array.shape[0]) * 100
 plt.plot(episodes_list, win_array)
 plt.xlabel('Episodes')
 plt.ylabel('win rate')
-plt.title('IPPO on Combat')
+plt.title('MFMARL on Combat')
 plt.show()
